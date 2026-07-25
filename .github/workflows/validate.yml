@@ -24,6 +24,12 @@ jobs:
       - name: validate
         run: tofu validate
 
+      # Runs against a mocked provider, so no Azure credentials are needed.
+      # This is the step that catches things `validate` cannot see, such as a
+      # value that only fails once it is resolved at plan time.
+      - name: test
+        run: tofu test
+
       - name: validate example
         working-directory: examples/basic
         run: |

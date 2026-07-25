@@ -7,6 +7,11 @@ resource "azurerm_storage_account" "this" {
 
   min_tls_version = "TLS1_2"
 
+  # The function app's content and runtime state live in this account. Nothing
+  # in it should ever be world-readable, so deny containers and blobs the
+  # ability to opt into anonymous public access (the provider default is true).
+  allow_nested_items_to_be_public = false
+
   tags = var.tags
 }
 
@@ -32,8 +37,21 @@ resource "azurerm_linux_function_app" "this" {
   https_only = var.https_only
 
   site_config {
-    application_stack {
-      python_version = var.python_version
+    # Stated explicitly rather than relying on the provider defaults so the
+    # posture is part of the module's contract: no plaintext FTP, no TLS < 1.2.
+    ftps_state          = "Disabled"
+    minimum_tls_version = "1.2"
+
+    # `application_stack` accepts exactly one runtime argument. Emitting the
+    # block with every argument unset leaves the app's runtime unmanaged, so
+    # omit the block entirely when no Python version is requested and let the
+    # caller pick a stack through `app_settings` instead.
+    dynamic "application_stack" {
+      for_each = var.python_version == null ? [] : [var.python_version]
+
+      content {
+        python_version = application_stack.value
+      }
     }
   }
 
