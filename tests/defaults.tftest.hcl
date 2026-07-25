@@ -4,7 +4,24 @@
 #
 # `mock_provider` means these runs need no Azure credentials and no network.
 
-mock_provider "azurerm" {}
+mock_provider "azurerm" {
+  # OpenTofu resolves mocked computed attributes to concrete random strings at
+  # plan time, where Terraform leaves them unknown. The provider parses
+  # service_plan_id, so it has to be given a syntactically real resource ID or
+  # the runs fail on the mock value rather than on anything this module does.
+  mock_resource "azurerm_service_plan" {
+    defaults = {
+      id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/example-rg/providers/Microsoft.Web/serverFarms/example-func-asp"
+    }
+  }
+
+  mock_resource "azurerm_storage_account" {
+    defaults = {
+      id                 = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/example-rg/providers/Microsoft.Storage/storageAccounts/examplefuncsa01"
+      primary_access_key = "mock-storage-account-key"
+    }
+  }
+}
 
 variables {
   name                 = "example-func01"
