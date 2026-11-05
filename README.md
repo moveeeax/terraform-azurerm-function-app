@@ -9,7 +9,7 @@ default hostname.
 
 ```hcl
 module "function_app" {
-  source = "github.com/moveeeax/terraform-azurerm-function-app"
+  source = "github.com/moveeeax/terraform-azurerm-function-app?ref=v1.0.0"
 
   name                 = "prod-func01"
   service_plan_name    = "prod-func-asp"
@@ -61,11 +61,12 @@ unsupported value at plan time, not at `terraform validate`.
 | Name      | Version           |
 |-----------|-------------------|
 | terraform | >= 1.5            |
-| azurerm   | >= 3.60.0, < 5.0.0 |
+| azurerm   | >= 3.60.0, < 6.0 |
 
 `azurerm` 3.60.0 is the first release whose `linux_function_app` accepts a
 `python_version` of `3.11`, which is this module's default. Anything older
-fails at plan time, not at `terraform validate`.
+fails at plan time, not at `terraform validate`. CI runs against the latest
+azurerm 5.x release; 6.x is excluded until it has been tested.
 
 Running the test suite in [`tests/`](tests) additionally needs Terraform or
 OpenTofu >= 1.7 for `mock_provider`; the module itself does not.
