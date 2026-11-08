@@ -98,6 +98,160 @@ run "null_python_version_omits_the_application_stack" {
   }
 }
 
+run "default_runtime_is_unchanged" {
+  command = plan
+
+  # Upgrading the module must not change the runtime of an existing app: with
+  # neither input set, the block holds python_version = "3.11" and nothing else.
+  assert {
+    condition     = azurerm_linux_function_app.this.site_config[0].application_stack[0].python_version == "3.11"
+    error_message = "The default runtime must stay Python 3.11."
+  }
+
+  assert {
+    condition = alltrue([
+      for k in ["node_version", "dotnet_version", "use_dotnet_isolated_runtime", "java_version", "powershell_core_version"] :
+      azurerm_linux_function_app.this.site_config[0].application_stack[0][k] == null
+    ])
+    error_message = "The default application_stack must not set any runtime other than Python."
+  }
+}
+
+run "node_stack_is_wired_through" {
+  command = plan
+
+  variables {
+    application_stack = {
+      node_version = "20"
+    }
+  }
+
+  assert {
+    condition     = azurerm_linux_function_app.this.site_config[0].application_stack[0].node_version == "20"
+    error_message = "application_stack.node_version must be passed through."
+  }
+
+  assert {
+    condition     = azurerm_linux_function_app.this.site_config[0].application_stack[0].python_version == null
+    error_message = "application_stack must replace python_version, not add to it; the provider accepts one runtime only."
+  }
+}
+
+run "dotnet_isolated_stack_is_wired_through" {
+  command = plan
+
+  variables {
+    application_stack = {
+      dotnet_version              = "8.0"
+      use_dotnet_isolated_runtime = true
+    }
+  }
+
+  assert {
+    condition     = azurerm_linux_function_app.this.site_config[0].application_stack[0].dotnet_version == "8.0"
+    error_message = "application_stack.dotnet_version must be passed through."
+  }
+
+  assert {
+    condition     = azurerm_linux_function_app.this.site_config[0].application_stack[0].use_dotnet_isolated_runtime == true
+    error_message = "application_stack.use_dotnet_isolated_runtime must be passed through."
+  }
+}
+
+run "java_stack_is_wired_through" {
+  command = plan
+
+  variables {
+    application_stack = {
+      java_version = "17"
+    }
+  }
+
+  assert {
+    condition     = azurerm_linux_function_app.this.site_config[0].application_stack[0].java_version == "17"
+    error_message = "application_stack.java_version must be passed through."
+  }
+}
+
+run "powershell_stack_is_wired_through" {
+  command = plan
+
+  variables {
+    application_stack = {
+      powershell_core_version = "7.4"
+    }
+  }
+
+  assert {
+    condition     = azurerm_linux_function_app.this.site_config[0].application_stack[0].powershell_core_version == "7.4"
+    error_message = "application_stack.powershell_core_version must be passed through."
+  }
+}
+
+run "application_stack_python_overrides_python_version" {
+  command = plan
+
+  variables {
+    python_version = "3.10"
+    application_stack = {
+      python_version = "3.11"
+    }
+  }
+
+  assert {
+    condition     = azurerm_linux_function_app.this.site_config[0].application_stack[0].python_version == "3.11"
+    error_message = "application_stack must take precedence over python_version."
+  }
+}
+
+run "rejects_application_stack_with_two_runtimes" {
+  command = plan
+
+  variables {
+    application_stack = {
+      node_version   = "20"
+      python_version = "3.11"
+    }
+  }
+
+  expect_failures = [var.application_stack]
+}
+
+run "rejects_application_stack_with_no_runtime" {
+  command = plan
+
+  variables {
+    application_stack = {}
+  }
+
+  expect_failures = [var.application_stack]
+}
+
+run "rejects_dotnet_isolated_without_dotnet_version" {
+  command = plan
+
+  variables {
+    application_stack = {
+      node_version                = "20"
+      use_dotnet_isolated_runtime = true
+    }
+  }
+
+  expect_failures = [var.application_stack]
+}
+
+run "rejects_malformed_application_stack_python_version" {
+  command = plan
+
+  variables {
+    application_stack = {
+      python_version = "3.11.4"
+    }
+  }
+
+  expect_failures = [var.application_stack]
+}
+
 run "https_only_can_be_opted_out_of_explicitly" {
   command = plan
 

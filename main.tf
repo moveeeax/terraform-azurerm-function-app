@@ -1,3 +1,19 @@
+locals {
+  # `application_stack` wins when set. Otherwise `python_version` is expanded
+  # into the same shape, so the default ("3.11", no application_stack) renders
+  # the exact block earlier releases did and existing apps plan unchanged.
+  application_stack = var.application_stack != null ? var.application_stack : (
+    var.python_version == null ? null : {
+      python_version              = var.python_version
+      node_version                = null
+      dotnet_version              = null
+      use_dotnet_isolated_runtime = null
+      java_version                = null
+      powershell_core_version     = null
+    }
+  )
+}
+
 resource "azurerm_storage_account" "this" {
   name                     = var.storage_account_name
   resource_group_name      = var.resource_group_name
@@ -44,13 +60,18 @@ resource "azurerm_linux_function_app" "this" {
 
     # `application_stack` accepts exactly one runtime argument. Emitting the
     # block with every argument unset leaves the app's runtime unmanaged, so
-    # omit the block entirely when no Python version is requested and let the
-    # caller pick a stack through `app_settings` instead.
+    # omit the block entirely when no runtime is requested and let the caller
+    # pick a stack through `app_settings` instead.
     dynamic "application_stack" {
-      for_each = var.python_version == null ? [] : [var.python_version]
+      for_each = local.application_stack == null ? [] : [local.application_stack]
 
       content {
-        python_version = application_stack.value
+        python_version              = application_stack.value.python_version
+        node_version                = application_stack.value.node_version
+        dotnet_version              = application_stack.value.dotnet_version
+        use_dotnet_isolated_runtime = application_stack.value.use_dotnet_isolated_runtime
+        java_version                = application_stack.value.java_version
+        powershell_core_version     = application_stack.value.powershell_core_version
       }
     }
   }
